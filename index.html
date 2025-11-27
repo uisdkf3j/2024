@@ -1,0 +1,878 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Babylon.js Scene with Custom Interactions</title>
+    <script src="https://cdn.babylonjs.com/babylon.js"></script>
+    <script src="https://cdn.babylonjs.com/loaders/babylonjs.loaders.min.js"></script>
+    <style>
+        body { margin: 0; overflow: hidden; }
+        canvas { width: 100%; height: 100vh; touch-action: none; }
+    </style>
+	<meta meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+    <style>
+        /* Style for the button */
+        #myButton {
+            position: absolute;
+            top: 24px;
+            left: 24px;
+            z-index: 100; /* Ensure the button is above the canvas */
+            padding: 12px 12px;
+            background-color: #FACC15;
+            color: white;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+        }
+
+         /* Style for the overlay div */
+         #overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: white; /* semi-transparent black */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 99; /* Just below the button */
+        }
+
+        /* Style for the progress bar container */
+        #progressContainer {
+            width: 80%;
+            height: 30px;
+            background: #ccc;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+
+        /* Style for the progress bar */
+        #progressBar {
+            height: 100%;
+            width: 0;
+            background: #FACC15;
+            transition: width 0.5s ease;
+        }
+        /*
+        .toggle-container {
+            position: fixed;
+            top: 30px;
+            right: 24px;
+            z-index: 1000; 
+        }
+        
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 60px;
+            height: 34px;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: 0.4s;
+            border-radius: 34px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 26px;
+            width: 26px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: 0.4s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: #FACC15;
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(26px);
+        }
+         */
+    </style>
+</head>
+<body>
+    <button id="myButton"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" class="h-5 w-8 font-thin" xmlns="http://www.w3.org/2000/svg"><path d="M11.9997 5.33331L5.33301 12L11.9997 18.6666" stroke="#1A222E" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></path><path d="M5.33301 12H18.6663" stroke="#1A222E" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></path></svg></button>
+    <div id="overlay">
+        <div id="progressContainer">
+            <div id="progressBar"></div>
+        </div>
+    </div>
+    <!--
+    <div class="toggle-container">
+        <label class="toggle-switch">
+            <input type="checkbox" id="toggleSwitch">
+            <span class="slider"></span>
+        </label>
+    </div>
+    -->
+    <canvas id="renderCanvas">
+    </canvas>
+    <script>
+    
+                var loadAsset1 = false;
+                var loadAsset2 = false;
+                var loadAsset3 = false;
+                var loadAsset4 = false;
+                var loadAsset5 = false;
+                var loadAsset6 = false;
+                var loadAsset7 = false;
+                var loadAsset8 = false;
+
+
+
+
+
+
+
+
+
+
+                var canvas = document.getElementById("renderCanvas");
+                // Generate the Babylon 3D engine
+                var engine = new BABYLON.Engine(canvas, true);
+
+                // Create the scene space
+                var createScene = function () {
+                var scene = new BABYLON.Scene(engine);
+
+                    // Set background color to white
+                    scene.clearColor = new BABYLON.Color3.FromHexString("#f7f7f7");
+
+                    // This creates and positions a camera 
+                    var camera = new BABYLON.ArcRotateCamera("Camera", Math.PI / 3, Math.PI / 6, 30, new BABYLON.Vector3(0, 0, 0), scene);            // This creates a light, aiming 0,1,0 - to the sky (non-mesh)
+                    var light = new BABYLON.HemisphericLight("light", new BABYLON.Vector3(0, 1, 0), scene);
+
+                    panningDistanceLimit = 0.0001;
+                    camera.panningSensibility = 0;
+
+                    //scene.imageProcessingConfiguration.toneMappingEnabled = true;
+                   // scene.imageProcessingConfiguration.toneMappingType = BABYLON.ImageProcessingConfiguration.TONEMAPPING_STANDARD;
+
+
+
+                    var parameters = {
+                        //edge_blur: 1.2,
+                        //chromatic_aberration: 0.1,
+                       // distortion: 0.1,
+                        //grain_amount: 0.5,
+                        //dof_aperture: 2,
+                        //dof_gain: 0.5,
+                       // dof_threshold: 0.1,
+                            // etc.
+                    };
+                    
+
+                var lensEffect = new BABYLON.LensRenderingPipeline('lensEffects', parameters, scene, 1.0, camera);
+
+
+                    // This attaches the camera to the canvas
+                    camera.attachControl(canvas, true);
+
+                    // Load .glb model
+                    var BaseModel;
+                    BABYLON.SceneLoader.ImportMesh("", "./", "Baked.glb", scene, function (meshes) {
+                        BaseModel = meshes[0];
+                        BaseModel.position = BABYLON.Vector3.Zero(); // Position the model as needed
+                        BaseModel.rotationQuaternion = null; // Clear rotation quaternion if present
+                        BaseModel.scaling = new BABYLON.Vector3(1, 1, -1); // Set model scaling if needed
+                        
+                        loadAsset1 = true;
+
+
+
+                        
+                    });	
+
+                    
+
+
+
+                    var Panos;
+                    BABYLON.SceneLoader.ImportMesh("", "./", "Panos.glb", scene, function (meshes) {
+                        Panos = meshes[0];
+                        loadAsset2 = true;
+
+
+                        Panos.rotationQuaternion = null; // Clear rotation quaternion if present
+                        Panos.scaling = new BABYLON.Vector3(1, 1, 1); // Set model scaling if needed
+                        scene.getMeshByName("Panorama_1").setEnabled(false);
+                        scene.getMeshByName("Panorama_2").setEnabled(false);
+                        scene.getMeshByName("Panorama_3").setEnabled(false);
+                        scene.getMeshByName("Panorama_4").setEnabled(false);
+                        scene.getMeshByName("Panorama_5").setEnabled(false);
+                    });
+
+
+
+
+
+
+
+
+
+
+                    var gs1 = new BABYLON.GaussianSplattingMesh("Doorway", null, scene);
+                        gs1.loadFileAsync("./Doorway.splat").then(()=>{      
+                            loadAsset3 = true;                
+                    });
+                    var gs2 = new BABYLON.GaussianSplattingMesh("Furniture_Room_1", null, scene);
+                        gs2.loadFileAsync("./Furniture_Room_1.splat").then(()=>{      
+                            loadAsset4 = true;                   
+                    });
+                    var gs3 = new BABYLON.GaussianSplattingMesh("Furniture_Room_2", null, scene);
+                        gs3.loadFileAsync("./Furniture_Room_2.splat").then(()=>{           
+                            loadAsset5 = true;              
+                    });
+                    var gs4 = new BABYLON.GaussianSplattingMesh("Shelf_Room_1", null, scene);
+                        gs4.loadFileAsync("./Shelf_Room_1.splat").then(()=>{        
+                            loadAsset6 = true;                 
+                    });
+                    var gs5 = new BABYLON.GaussianSplattingMesh("Window_Room_2", null, scene);
+                        gs5.loadFileAsync("./Window_Room_2.splat").then(()=>{         
+                            loadAsset7 = true;                
+                    });
+                    var gs6 = new BABYLON.GaussianSplattingMesh("Windows_Room_1", null, scene);
+                        gs6.loadFileAsync("./Windows_Room_1.splat").then(()=>{    
+                            loadAsset8 = true;                     
+                    });
+
+            
+
+
+
+
+
+
+
+                    camera.fov = 0.9;
+                    previousMode = 'isometric';
+                    camera.lowerBetaLimit = 0;
+                    camera.upperBetaLimit = Math.PI / 2.5;
+                    camera.minZ = 0.01;
+                    camera.lowerRadiusLimit = 0;
+
+
+                function CameraMode() {
+                    //Topdown view Mode
+
+
+                    if (previousMode == 'isometric') {
+                        crossSection();
+                    }
+
+                    if (camera.radius > 3 && camera.beta < 0.15 && previousMode == 'isometric') {
+                       // console.log('Top-down view mode');
+                        previousMode = 'ortho'; 
+                        ortho();
+                    //Isometric view Mode
+                    } else if (camera.radius > 3 && camera.beta > 0.15 && previousMode == 'ortho') {
+                        //console.log('Isometric view mode');
+                        previousMode = 'isometric';
+                        isometric();
+                        
+
+
+                    //Panorama view Mode
+                    } else if (camera.radius < 3 && previousMode == 'isometric' && selection != 'none') {
+                        //console.log('Panorama view mode');
+                        previousMode = 'pano'
+                        pano();
+                    } else if (camera.radius > 0.1 && previousMode == 'pano') {
+                       // console.log('Isometric view mode');
+                        previousMode = 'isometric';
+                        isometric();
+                        
+
+
+                    }
+
+                   
+                }
+
+                function ortho() {
+                    camera.upperRadiusLimit = 180;
+                    camera.lowerRadiusLimit = 40;
+                    camera.radius = 120;
+                    camera.fov = 0.1;
+                    camera.invertRotation = false;
+                }
+
+                function isometric() {
+                    scene.getMeshByName("Panorama_1").setEnabled(false);
+                    scene.getMeshByName("Panorama_2").setEnabled(false);
+                    scene.getMeshByName("Panorama_3").setEnabled(false);
+                    scene.getMeshByName("Panorama_4").setEnabled(false);
+                    scene.getMeshByName("Panorama_5").setEnabled(false);
+
+
+
+                    camera.lowerRadiusLimit = 2;
+
+
+
+                    camera.upperRadiusLimit = 35;
+                    camera.fov = 0.9;
+
+                    camera.radius = 10;
+
+                    camera.lowerBetaLimit = 0;
+                    camera.upperBetaLimit = Math.PI / 2.5;
+                    
+                    camera.invertRotation = false;
+
+                }
+
+                function pano() {
+                    camera.lowerRadiusLimit = 0;
+                    camera.radius = 0;
+                    camera.fov = 1.5;
+                    camera.lowerBetaLimit = 0;
+                    camera.upperBetaLimit = Math.PI - 0.1;
+                    camera.invertRotation = true;
+
+                    var camAlpha = camera.alpha;
+                    var camBeta = camera.beta;
+
+
+
+
+                    if (selection == 'room_1') {
+                        scene.getMeshByName("Panorama_1").setEnabled(true);
+                        scene.getMeshByName("Panorama_2").setEnabled(true);
+                        scene.getMeshByName("Panorama_3").setEnabled(true);
+                        scene.getMeshByName("Panorama_4").setEnabled(true);
+
+
+                        camera.position = scene.getMeshByName("Panorama_3").position;
+                        camera.target = scene.getMeshByName("Panorama_3").position;
+                        camera.alpha = camAlpha;
+                        camera.beta = camBeta;
+
+                    } else if (selection == 'room_2') {
+                        scene.getMeshByName("Panorama_5").setEnabled(true);
+                        camera.position = scene.getMeshByName('Panorama_5').position;
+                        camera.target = scene.getMeshByName('Panorama_5').position;
+                        camera.alpha = camAlpha;
+                        camera.beta = camBeta;
+                    }
+
+
+
+                }
+
+
+
+
+                var selection = 'none';
+
+
+
+                function handleMeshPicking(pickResult) {
+                    if (pickResult.hit && pickResult.pickedMesh) {
+                        var target = pickResult.pickedMesh.position;
+
+                        // Animate camera pivot change without altering rotation
+                        var alpha = camera.alpha;
+                        var beta = camera.beta;
+                        var newRadius = 20; // Default radius
+
+                        // Check which hitbox was picked and set transparency and camera distance accordingly
+                        var name = pickResult.pickedMesh.name.toLowerCase();
+                        var nonRelevantMeshes, relevantMeshes;
+
+                       // console.log(name);
+                        if (name === 'room_1') {
+                            selection = 'room_1'
+                            BABYLON.Animation.CreateAndStartAnimation('camTarget', camera, 'target', 60, 10, camera.target, scene.getMeshByName('Panorama_3').position, BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT);
+                      
+                        } else if (name === 'room_2') {
+                            selection = 'room_2'
+                            BABYLON.Animation.CreateAndStartAnimation('camTarget', camera, 'target', 60, 10, camera.target, scene.getMeshByName('Panorama_5').position, BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT);
+                        }
+
+                    } else {
+                        var center = BABYLON.Vector3.Zero();
+                        BABYLON.Animation.CreateAndStartAnimation('camTarget', camera, 'target', 60, 10, camera.target, center, BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT);
+                        selection = 'none';
+                        crossSection();
+                    }
+                }
+
+
+
+
+
+
+
+
+                function crossSection () {
+                    var alphaQ = camera.alpha % (2 * Math.PI);
+                    if (alphaQ < 0) alphaQ += 2 * Math.PI;
+                        var quadrant;
+                        if (alphaQ >= 0 && alphaQ < Math.PI / 2) {
+                            quadrant = 1;
+                            
+                        } else if (alphaQ >= Math.PI / 2 && alphaQ < Math.PI) {
+                            quadrant = 2;
+                            
+                        } else if (alphaQ >= Math.PI && alphaQ < 3 * Math.PI / 2) {
+                            quadrant = 3;
+                            
+                        } else {
+                            quadrant = 4;
+                            
+                        }
+                    //console.log('selection',selection);
+                  //  console.log('quadrant',quadrant);
+                    if (selection == "room_1") {
+                        scene.getTransformNodeByName("Top_Room_2_3").getChildMeshes().forEach(mesh => {
+                            mesh.setEnabled(true);
+                            mesh.visibility = 0.1;
+                        });
+                        scene.getTransformNodeByName("Top_Room_2_2").getChildMeshes().forEach(mesh => {
+                            mesh.setEnabled(true);
+                            mesh.visibility = 0.1;
+                        });
+                        scene.getTransformNodeByName("Top_Middle").getChildMeshes().forEach(mesh => {
+                            mesh.setEnabled(true);
+                        });
+                        scene.getTransformNodeByName("Top_Room_2_1").getChildMeshes().forEach(mesh => {
+                            mesh.setEnabled(true);
+                            mesh.visibility = 0.1;
+                        });
+                        scene.getTransformNodeByName("Bot_Room_2").getChildMeshes().forEach(mesh => {
+                            mesh.visibility = 0.1;
+                        });
+                        
+                        scene.getTransformNodeByName("Top_Room_1_3").getChildMeshes().forEach(mesh => {
+                            mesh.visibility = 1;
+                        });
+                        scene.getTransformNodeByName("Top_Room_1_2").getChildMeshes().forEach(mesh => {
+                            mesh.visibility = 1;
+                        });
+                        scene.getTransformNodeByName("Top_Room_1_1").getChildMeshes().forEach(mesh => {
+                            mesh.visibility = 1;
+                        });
+                        scene.getTransformNodeByName("Bot_Room_1").getChildMeshes().forEach(mesh => {
+                            mesh.visibility = 1;
+                        });
+
+                        scene.getMeshByName("Furniture_Room_1").setEnabled(true);
+                        scene.getMeshByName("Furniture_Room_2").setEnabled(false);
+                        scene.getMeshByName("Window_Room_2").setEnabled(false);
+                        scene.getMeshByName("Windows_Room_1").setEnabled(true);
+                        scene.getMeshByName("Shelf_Room_1").setEnabled(true);
+
+
+                        scene.getMeshByName("Wardrobe").setEnabled(false);
+                        scene.getMeshByName("Closet").setEnabled(true);
+                        scene.getMeshByName("Fridge").setEnabled(true);
+                        scene.getMeshByName("Shelves").setEnabled(true);
+
+                        
+
+
+
+
+
+
+                        switch (quadrant) {
+                                case 1:
+                                    scene.getTransformNodeByName("Top_Room_1_3").getChildMeshes().forEach(mesh => {
+                                        mesh.setEnabled(true);
+                                        
+                                    });
+                                    scene.getTransformNodeByName("Top_Room_1_2").getChildMeshes().forEach(mesh => {
+                                        mesh.setEnabled(true);
+                                    });
+                                    scene.getTransformNodeByName("Top_Middle").getChildMeshes().forEach(mesh => {
+                                        mesh.setEnabled(false);
+                                    });
+                                    scene.getTransformNodeByName("Top_Room_1_1").getChildMeshes().forEach(mesh => {
+                                        mesh.setEnabled(false);
+                                    });
+
+                                    scene.getMeshByName("Shelf_Room_1").setEnabled(false);
+
+
+                                    break;
+                                case 2:
+                                    scene.getTransformNodeByName("Top_Room_1_3").getChildMeshes().forEach(mesh => {
+                                        mesh.setEnabled(true);
+                                    });
+                                    scene.getTransformNodeByName("Top_Room_1_2").getChildMeshes().forEach(mesh => {
+                                        mesh.setEnabled(false);
+                                    });
+                                    scene.getTransformNodeByName("Top_Middle").getChildMeshes().forEach(mesh => {
+                                        mesh.setEnabled(true);
+                                    });
+                                    scene.getTransformNodeByName("Top_Room_1_1").getChildMeshes().forEach(mesh => {
+                                        mesh.setEnabled(false);
+                                    });
+
+                                    scene.getMeshByName("Shelf_Room_1").setEnabled(false);
+
+                                    break;                                break;
+                                case 3:
+                                    scene.getTransformNodeByName("Top_Room_1_3").getChildMeshes().forEach(mesh => {
+                                        mesh.setEnabled(false);
+                                    });
+                                    scene.getTransformNodeByName("Top_Room_1_2").getChildMeshes().forEach(mesh => {
+                                        mesh.setEnabled(false);
+                                    });
+                                    scene.getTransformNodeByName("Top_Middle").getChildMeshes().forEach(mesh => {
+                                        mesh.setEnabled(true);
+                                    });
+                                    scene.getTransformNodeByName("Top_Room_1_1").getChildMeshes().forEach(mesh => {
+                                        mesh.setEnabled(true);
+                                    });
+
+                                    scene.getMeshByName("Windows_Room_1").setEnabled(false);
+
+                                    break;                      
+                                case 4:
+                                    scene.getTransformNodeByName("Top_Room_1_3").getChildMeshes().forEach(mesh => {
+                                        mesh.setEnabled(false);
+                                    });
+                                    scene.getTransformNodeByName("Top_Room_1_2").getChildMeshes().forEach(mesh => {
+                                        mesh.setEnabled(true);
+                                    });
+                                    scene.getTransformNodeByName("Top_Middle").getChildMeshes().forEach(mesh => {
+                                        mesh.setEnabled(false);
+                                    });
+                                    scene.getTransformNodeByName("Top_Room_1_1").getChildMeshes().forEach(mesh => {
+                                        mesh.setEnabled(true);
+                                    });
+
+                                    scene.getMeshByName("Windows_Room_1").setEnabled(false);
+
+
+                                    break;                      
+					    }
+
+
+                    } else if (selection == "room_2") {
+                        scene.getTransformNodeByName("Top_Room_1_3").getChildMeshes().forEach(mesh => {
+                            mesh.setEnabled(true);
+                            mesh.visibility = 0.1;
+                        });
+                        scene.getTransformNodeByName("Top_Room_1_2").getChildMeshes().forEach(mesh => {
+                            mesh.setEnabled(true);
+                            mesh.visibility = 0.1;
+                        });
+                        scene.getTransformNodeByName("Top_Middle").getChildMeshes().forEach(mesh => {
+                            mesh.setEnabled(true);
+                        });
+                        scene.getTransformNodeByName("Top_Room_1_1").getChildMeshes().forEach(mesh => {
+                            mesh.setEnabled(true);
+                            mesh.visibility = 0.1;
+                        });
+                        scene.getTransformNodeByName("Bot_Room_1").getChildMeshes().forEach(mesh => {
+                            mesh.visibility = 0.1;
+                        });
+                        
+                        scene.getTransformNodeByName("Top_Room_2_3").getChildMeshes().forEach(mesh => {
+                            mesh.visibility = 1;
+                        });
+                        scene.getTransformNodeByName("Top_Room_2_2").getChildMeshes().forEach(mesh => {
+                            mesh.visibility = 1;
+                        });
+                        scene.getTransformNodeByName("Top_Room_2_1").getChildMeshes().forEach(mesh => {
+                            mesh.visibility = 1;
+                        });
+                        scene.getTransformNodeByName("Bot_Room_2").getChildMeshes().forEach(mesh => {
+                            mesh.visibility = 1;
+                        });
+
+                        scene.getMeshByName("Furniture_Room_1").setEnabled(false);
+                        scene.getMeshByName("Shelf_Room_1").setEnabled(false);
+                        scene.getMeshByName("Furniture_Room_2").setEnabled(true);
+                        scene.getMeshByName("Windows_Room_1").setEnabled(false);
+                        scene.getMeshByName("Window_Room_2").setEnabled(true);
+
+                        scene.getMeshByName("Wardrobe").setEnabled(true);
+                        scene.getMeshByName("Closet").setEnabled(false);
+                        scene.getMeshByName("Fridge").setEnabled(false);
+                        scene.getMeshByName("Shelves").setEnabled(false);
+
+
+
+
+                        switch (quadrant) {
+                                case 1:
+                                    scene.getTransformNodeByName("Top_Room_2_3").getChildMeshes().forEach(mesh => {
+                                        mesh.setEnabled(false);
+                                    });
+                                    scene.getTransformNodeByName("Top_Room_2_2").getChildMeshes().forEach(mesh => {
+                                        mesh.setEnabled(false);
+                                    });
+                                    scene.getTransformNodeByName("Top_Middle").getChildMeshes().forEach(mesh => {
+                                        mesh.setEnabled(true);
+                                    });
+                                    scene.getTransformNodeByName("Top_Room_2_1").getChildMeshes().forEach(mesh => {
+                                        mesh.setEnabled(true);
+                                    });
+
+                                    scene.getMeshByName("Window_Room_2").setEnabled(false);
+
+
+                                    break;
+                                case 2:
+                                    scene.getTransformNodeByName("Top_Room_2_3").getChildMeshes().forEach(mesh => {
+                                        mesh.setEnabled(false);
+                                    });
+                                    scene.getTransformNodeByName("Top_Room_2_2").getChildMeshes().forEach(mesh => {
+                                        mesh.setEnabled(true);
+                                    });
+                                    scene.getTransformNodeByName("Top_Middle").getChildMeshes().forEach(mesh => {
+                                        mesh.setEnabled(false);
+                                    });
+                                    scene.getTransformNodeByName("Top_Room_2_1").getChildMeshes().forEach(mesh => {
+                                        mesh.setEnabled(true);
+                                    });
+                                    break;                                break;
+                                case 3:
+                                    scene.getTransformNodeByName("Top_Room_2_3").getChildMeshes().forEach(mesh => {
+                                        mesh.setEnabled(true);
+                                    });
+                                    scene.getTransformNodeByName("Top_Room_2_2").getChildMeshes().forEach(mesh => {
+                                        mesh.setEnabled(true);
+                                    });
+                                    scene.getTransformNodeByName("Top_Middle").getChildMeshes().forEach(mesh => {
+                                        mesh.setEnabled(false);
+                                    });
+                                    scene.getTransformNodeByName("Top_Room_2_1").getChildMeshes().forEach(mesh => {
+                                        mesh.setEnabled(false);
+                                    });
+
+
+                                    break;                      
+                                case 4:
+                                    scene.getTransformNodeByName("Top_Room_2_3").getChildMeshes().forEach(mesh => {
+                                        mesh.setEnabled(true);
+                                    });
+                                    scene.getTransformNodeByName("Top_Room_2_2").getChildMeshes().forEach(mesh => {
+                                        mesh.setEnabled(false);
+                                    });
+                                    scene.getTransformNodeByName("Top_Middle").getChildMeshes().forEach(mesh => {
+                                        mesh.setEnabled(true);
+                                    });
+                                    scene.getTransformNodeByName("Top_Room_2_1").getChildMeshes().forEach(mesh => {
+                                        mesh.setEnabled(false);
+                                    });
+
+                                    scene.getMeshByName("Window_Room_2").setEnabled(false);
+
+                                    break;                      
+					    }
+
+                    } else if (selection == 'none' && BaseModel ) {
+                        scene.getTransformNodeByName("Top_Room_1_3").getChildMeshes().forEach(mesh => {
+                            mesh.setEnabled(true);
+                            mesh.visibility = 1;
+                        });
+                        scene.getTransformNodeByName("Top_Room_1_2").getChildMeshes().forEach(mesh => {
+                            mesh.setEnabled(true);
+                            mesh.visibility = 1;
+                        });
+                        scene.getTransformNodeByName("Top_Middle").getChildMeshes().forEach(mesh => {
+                            mesh.setEnabled(true);
+                            mesh.visibility = 1;
+                        });
+                        scene.getTransformNodeByName("Top_Room_1_1").getChildMeshes().forEach(mesh => {
+                            mesh.setEnabled(true);
+                            mesh.visibility = 1;
+                        });
+                        scene.getTransformNodeByName("Top_Room_2_3").getChildMeshes().forEach(mesh => {
+                            mesh.setEnabled(true);
+                            mesh.visibility = 1;
+                        });
+                        scene.getTransformNodeByName("Top_Room_2_2").getChildMeshes().forEach(mesh => {
+                            mesh.setEnabled(true);
+                            mesh.visibility = 1;
+                        });
+                        scene.getTransformNodeByName("Bot_Room_1").getChildMeshes().forEach(mesh => {
+                            mesh.setEnabled(true);
+                            mesh.visibility = 1;
+                        });
+                        scene.getTransformNodeByName("Top_Room_2_1").getChildMeshes().forEach(mesh => {
+                            mesh.setEnabled(true);
+                            mesh.visibility = 1;
+                        });
+                        scene.getTransformNodeByName("Bot_Room_2").getChildMeshes().forEach(mesh => {
+                            mesh.setEnabled(true);
+                            mesh.visibility = 1;
+                        });
+
+                        scene.getMeshByName("Furniture_Room_1").setEnabled(true);
+                        scene.getMeshByName("Furniture_Room_2").setEnabled(true);
+                        scene.getMeshByName("Window_Room_2").setEnabled(true);
+                        scene.getMeshByName("Windows_Room_1").setEnabled(true);
+                        scene.getMeshByName("Shelf_Room_1").setEnabled(true);
+
+
+                        scene.getMeshByName("Wardrobe").setEnabled(true);
+                        scene.getMeshByName("Closet").setEnabled(true);
+                        scene.getMeshByName("Fridge").setEnabled(true);
+                        scene.getMeshByName("Shelves").setEnabled(true);
+
+
+
+                    }
+                }
+
+
+
+            var isDragging = false;
+
+            canvas.addEventListener("touchstart", function (evt) {
+                isDragging = true;
+                
+            });
+
+            canvas.addEventListener("touchend", function () {
+                isDragging = false;
+                
+            });
+
+
+            canvas.addEventListener("click", function (evt) {
+
+                if (!isDragging) {
+                    var pickResult = scene.pick(evt.clientX, evt.clientY)
+                    handleMeshPicking(pickResult);
+                }
+            });
+
+
+            //Switch logic
+            /*
+            function hide(){
+                
+
+            }
+
+          
+            document.getElementById('toggleSwitch').addEventListener('change', function() {
+                if (this.checked) {
+                    scene.getMeshByName("Furniture_Room_1").visibility = 0;
+                    scene.getMeshByName("Furniture_Room_2").visibility = 0;
+                    scene.getMeshByName("Windows_Room_1").visibility = 0;
+                    scene.getMeshByName("Window_Room_2").visibility = 0;
+                    scene.getMeshByName("Doorway").visibility = 0;
+                    scene.getMeshByName("Shelf_Room_1").visibility = 0;
+
+                    scene.materials.forEach(material => {
+                                // Check if the material name contains the string 'accent'
+                                if (material.name.toLowerCase().includes('material_1') && material instanceof BABYLON.PBRMaterial || material.name.toLowerCase().includes('material_0') && material instanceof BABYLON.PBRMaterial) {
+                                    // Change the emission color to black (hex #000000)
+                                    material.alpha = 0;
+                                }
+                    });
+
+
+
+
+
+
+                } else {
+                    scene.getMeshByName("Furniture_Room_1").visibility = 1;
+                    scene.getMeshByName("Furniture_Room_2").visibility = 1;
+                    scene.getMeshByName("Windows_Room_1").visibility = 1;
+                    scene.getMeshByName("Window_Room_2").visibility = 1;
+                    scene.getMeshByName("Doorway").visibility = 1;
+                    scene.getMeshByName("Shelf_Room_1").visibility = 1;
+
+                    scene.materials.forEach(material => {
+                                // Check if the material name contains the string 'accent'
+                                if (material.name.toLowerCase().includes('material_1') && material instanceof BABYLON.PBRMaterial || material.name.toLowerCase().includes('material_0') && material instanceof BABYLON.PBRMaterial) {
+                                    // Change the emission color to black (hex #000000)
+                                    material.alpha = 1;
+                                }
+                    });
+
+                }
+                
+            });
+            */
+
+
+
+
+
+
+                    // Register a render loop to repeatedly render the scene
+                    engine.runRenderLoop(function () {
+                        scene.render();	
+                        CameraMode();
+                        updateProgressBar();
+                    });
+
+                    // Watch for browser/canvas resize events
+                    window.addEventListener("resize", function () {
+                        engine.resize();
+                    });
+
+                };
+                var scene = createScene();
+
+
+
+        // JavaScript for button click
+        document.getElementById('myButton').onclick = function () {
+            window.location.href = 'https://story.g360lab.com/5ddf9570f9694479b883dfcd7685585f/new-camera-testing';
+        };
+
+        // Progress bar logic
+        const progressBar = document.getElementById('progressBar');
+        const overlay = document.getElementById('overlay');
+
+            let variables = [loadAsset1, loadAsset2, loadAsset3, loadAsset4, loadAsset5, loadAsset6, loadAsset7, loadAsset8];
+
+        
+
+        function updateProgressBar() {
+            let variables = [loadAsset1, loadAsset2, loadAsset3, loadAsset4, loadAsset5, loadAsset6, loadAsset7, loadAsset8];
+            let trueCount = variables.filter(Boolean).length;
+            let progress = (trueCount / 8) * 100;
+            progressBar.style.width = progress + '%';
+            if (trueCount === 8) {
+                setTimeout(() => {
+                    overlay.style.transition = 'opacity 1s ease';
+                    overlay.style.opacity = '0';
+                    setTimeout(() => {
+                        overlay.style.display = 'none';
+                    }, 1000);
+                }, 500);
+
+
+
+            }
+        }
+
+   
+
+
+
+</script>
+</body>
+</html>
